@@ -31,6 +31,7 @@ export default function PdfCanvasViewer({ jobId, outputFileId, activeJob, onRese
   const [sheetDetails, setSheetDetails] = useState({ width: 0, height: 0 });
   const [localBlobUrl, setLocalBlobUrl] = useState(null);
   const [viewMode, setViewMode] = useState('NATIVE'); // 'NATIVE' | 'CANVAS'
+  const [downloadCompleted, setDownloadCompleted] = useState(false);
 
   const canvasRef = useRef(null);
   const pdfDocRef = useRef(null);
@@ -181,16 +182,47 @@ export default function PdfCanvasViewer({ jobId, outputFileId, activeJob, onRese
   }, [renderCurrentPage]);
 
   const handleDownload = () => {
+    // Construct direct download endpoint with ?download=true so backend verifies status=COMPLETED and auto-deletes from DB
+    const baseUrl = outputFileId ? getOutputPdfUrl(outputFileId) : (jobId ? getJobOutputUrl(jobId) : null);
+    const downloadUrl = baseUrl ? `${baseUrl}${baseUrl.includes('?') ? '&' : '?'}download=true` : (localBlobUrl || pdfUrl);
+
     const link = document.createElement('a');
-    link.href = localBlobUrl || pdfUrl;
+    link.href = downloadUrl;
     link.download = `prepress_imposed_sheet_${jobId ? jobId.slice(-6) : 'output'}.pdf`;
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
+
+    setDownloadCompleted(true);
   };
 
   return (
     <div className="w-full max-w-6xl mx-auto py-6 px-4">
+
+      {/* Auto-Delete Notification Banner after successful download */}
+      {downloadCompleted && (
+        <div className="mb-6 p-4 rounded-2xl bg-gradient-to-r from-emerald-950/90 via-teal-950/80 to-[#131B28] border border-emerald-500/70 shadow-2xl flex items-center justify-between flex-wrap gap-3">
+          <div className="flex items-center gap-3">
+            <div className="w-9 h-9 rounded-xl bg-emerald-500/20 border border-emerald-400 flex items-center justify-center text-emerald-300 shrink-0">
+              <CheckCircle2 className="w-5 h-5" />
+            </div>
+            <div>
+              <h4 className="text-sm font-bold text-white m-0">PDF Downloaded & Auto-Deleted from DB</h4>
+              <p className="text-xs text-emerald-200 mt-0.5 font-mono">
+                The file was delivered and its record has been automatically purged from the database as requested.
+              </p>
+            </div>
+          </div>
+          {onReset && (
+            <button
+              onClick={onReset}
+              className="px-4 py-2 rounded-xl text-xs font-mono font-bold bg-emerald-400 hover:bg-emerald-300 text-slate-950 shadow-lg shadow-emerald-500/20 transition-all cursor-pointer hover:scale-105 active:scale-95"
+            >
+              Start New Job
+            </button>
+          )}
+        </div>
+      )}
 
       {/* Top Banner */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6 bg-[#131B28] border border-[#222E42] p-5 rounded-2xl text-left shadow-xl">
@@ -210,7 +242,7 @@ export default function PdfCanvasViewer({ jobId, outputFileId, activeJob, onRese
             </div>
             <p className="text-xs text-slate-300 mt-0.5 font-mono">
               Job #{jobId ? jobId.slice(-6).toUpperCase() : 'N/A'} | Output ID: {outputFileId ? outputFileId.slice(-6) : 'N/A'}
-              {sheetDetails.width > 0 && ` | Sheet: ${sheetDetails.width} × ${sheetDetails.height} mm`}
+              {sheetDetails.width > 0 && ` | Sheet: ${sheetDetails.width} × ${sheetDetails.height} mm (${(sheetDetails.width / 25.4).toFixed(2)}" × ${(sheetDetails.height / 25.4).toFixed(2)}")`}
             </p>
           </div>
         </div>

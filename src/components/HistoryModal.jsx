@@ -381,7 +381,7 @@ export default function HistoryModal({ isOpen, onClose, onLoadJob, onInspectOutp
                         📚 {item.bindingStyle.replace('_', ' ')}
                       </span>
                       <span className="px-2 py-0.5 bg-[#172030] text-slate-300 rounded border border-[#273750]">
-                        🖨️ {item.sheetWidth} × {item.sheetHeight} {item.sheetUnit}
+                        🖨️ {item.sheetWidth} × {item.sheetHeight} {item.sheetUnit} ({Number(item.sheetWidth / 25.4).toFixed(2)}" × {Number(item.sheetHeight / 25.4).toFixed(2)}")
                       </span>
                       <span className="px-2 py-0.5 bg-cyan-950/70 text-cyan-300 rounded border border-cyan-800/50">
                         🧭 {item.pageOrientation || 'AUTO'}
@@ -405,14 +405,20 @@ export default function HistoryModal({ isOpen, onClose, onLoadJob, onInspectOutp
                         </button>
 
                         <a
-                          href={getOutputPdfUrl(item.outputFileId)}
+                          href={`${getOutputPdfUrl(item.outputFileId)}?download=true`}
                           target="_blank"
                           rel="noreferrer"
                           download={item.outputFileName}
+                          onClick={() => {
+                            setTimeout(() => {
+                              fetchHistory();
+                            }, 1500);
+                          }}
                           className="px-2.5 py-1 text-[11px] font-medium text-slate-300 hover:text-white bg-[#17212E] hover:bg-[#202C3D] border border-[#26364A] rounded-lg flex items-center gap-1.5 transition-all"
+                          title="Download imposed PDF and automatically remove from database"
                         >
-                          <Download className="w-3 h-3 text-slate-400" />
-                          <span>Download Imposed</span>
+                          <Download className="w-3 h-3 text-emerald-400" />
+                          <span>Download & Delete</span>
                         </a>
                       </div>
 

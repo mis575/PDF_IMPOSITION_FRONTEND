@@ -1080,10 +1080,12 @@ export default function SheetPreview({
               </strong>
               <span className="text-slate-500">•</span>
               <span className="text-cyan-400 font-semibold bg-cyan-950/60 px-1.5 py-0.5 rounded border border-cyan-800/60">
-                Sheet: {sw} × {sh} mm
+                Sheet: {sw} × {sh} mm ({Number(sw / 25.4).toFixed(2)}" × {Number(sh / 25.4).toFixed(2)}")
               </span>
               <span className="text-slate-500">•</span>
-              <span className="text-emerald-400 font-semibold">Flat Box: {parseFloat(boxParams?.flatWidth) || boxLayout.cellW} × {parseFloat(boxParams?.flatHeight) || boxLayout.cellH} mm</span>
+              <span className="text-emerald-400 font-semibold">
+                Flat Box: {parseFloat(boxParams?.flatWidth) || boxLayout.cellW} × {parseFloat(boxParams?.flatHeight) || boxLayout.cellH} mm ({Number((parseFloat(boxParams?.flatWidth) || boxLayout.cellW) / 25.4).toFixed(2)}" × {Number((parseFloat(boxParams?.flatHeight) || boxLayout.cellH) / 25.4).toFixed(2)}")
+              </span>
             </span>
           ) : (
             <span className="flex items-center gap-1.5 flex-wrap">
@@ -1095,12 +1097,14 @@ export default function SheetPreview({
               <span className="text-slate-400">{layoutPagesCount}PP {impositionMode}</span>
               <span className="text-slate-500">•</span>
               <span className="text-cyan-400 font-semibold bg-cyan-950/60 px-1.5 py-0.5 rounded border border-cyan-800/60">
-                Sheet: {sw} × {sh} mm
+                Sheet: {sw} × {sh} mm ({Number(sw / 25.4).toFixed(2)}" × {Number(sh / 25.4).toFixed(2)}")
               </span>
               {bookWidth && bookHeight ? (
                 <>
                   <span className="text-slate-500">•</span>
-                  <span className="text-emerald-400 font-semibold">Book Trim: {bookWidth} × {bookHeight} mm</span>
+                  <span className="text-emerald-400 font-semibold">
+                    Book Trim: {bookWidth} × {bookHeight} mm ({Number(bookWidth / 25.4).toFixed(2)}" × {Number(bookHeight / 25.4).toFixed(2)}")
+                  </span>
                 </>
               ) : null}
             </span>

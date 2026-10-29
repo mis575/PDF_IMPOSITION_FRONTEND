@@ -459,6 +459,7 @@ export default function ImpositionSection({
   const [trimHeader, setTrimHeader] = useState(false); // Default false: only trim header when explicitly requested by user
   const [headerTrimHeight, setHeaderTrimHeight] = useState(0.75); // in packagingUnit (0.75 in or 20 mm)
   const [bookPreset, setBookPreset] = useState('AUTO');
+  const [showManualMargins, setShowManualMargins] = useState(false); // Hide cluttered margin sliders by default
 
   // Dynamic synchronization when initialProductType or initialSheetConfig props arrive
   useEffect(() => {
@@ -1361,7 +1362,7 @@ export default function ImpositionSection({
     setDetectingMargins(true);
     setMarginDetectionResult(null);
     setRemoveWhiteSpace(true);
-    setTrimHeader(true);
+    // Do NOT automatically tick trimHeader - respect user choice
     const isInch = packagingUnit === 'inch';
     const roundFactor = isInch ? 100 : 10;
     const factor = isInch ? 1 / 25.4 : 1;
@@ -1391,11 +1392,13 @@ export default function ImpositionSection({
       trimmedLeft = Math.round(targetBox.leftMM * factor * roundFactor) / roundFactor;
       trimmedRight = Math.round(targetBox.rightMM * factor * roundFactor) / roundFactor;
 
-      // Use dielineOnly to trim off title blocks
-      if (targetBox.dielineOnly) {
+      // Only trim off top header if user explicitly ticked trimHeader!
+      if (trimHeader && targetBox.dielineOnly) {
         trimmedTop = Math.round(targetBox.dielineOnly.topMM * factor * roundFactor) / roundFactor;
-      } else {
+      } else if (trimHeader) {
         trimmedTop = Math.round((targetBox.topMM + hMM_cad) * factor * roundFactor) / roundFactor;
+      } else {
+        trimmedTop = Math.round(targetBox.topMM * factor * roundFactor) / roundFactor;
       }
     } else {
       const srcW = isInch ? (sourcePdfPageWidthMM / 25.4) : sourcePdfPageWidthMM;
@@ -1453,7 +1456,7 @@ export default function ImpositionSection({
     setDetectingMargins(true);
     setMarginDetectionResult(null);
     setRemoveWhiteSpace(true);
-    setTrimHeader(true);
+    // Do NOT automatically tick trimHeader - respect user choice
     const isInch = packagingUnit === 'inch';
     const roundFactor = isInch ? 100 : 10;
     const factor = isInch ? 1 / 25.4 : 1;
@@ -1483,11 +1486,13 @@ export default function ImpositionSection({
       trimmedLeft = Math.round(targetBox.leftMM * factor * roundFactor) / roundFactor;
       trimmedRight = Math.round(targetBox.rightMM * factor * roundFactor) / roundFactor;
 
-      // Use dielineOnly to trim off title blocks
-      if (targetBox.dielineOnly) {
+      // Only trim off top header if user explicitly ticked trimHeader!
+      if (trimHeader && targetBox.dielineOnly) {
         trimmedTop = Math.round(targetBox.dielineOnly.topMM * factor * roundFactor) / roundFactor;
-      } else {
+      } else if (trimHeader) {
         trimmedTop = Math.round((targetBox.topMM + hMM) * factor * roundFactor) / roundFactor;
+      } else {
+        trimmedTop = Math.round(targetBox.topMM * factor * roundFactor) / roundFactor;
       }
     } else {
       const srcW = isInch ? (sourcePdfPageWidthMM / 25.4) : sourcePdfPageWidthMM;
@@ -1563,8 +1568,8 @@ export default function ImpositionSection({
     setDetectingMargins(false);
   };
 
-  const handleToggleTrimHeader = () => {
-    const next = !trimHeader;
+  const handleToggleTrimHeader = (forcedVal) => {
+    const next = typeof forcedVal === 'boolean' ? forcedVal : !trimHeader;
     setTrimHeader(next);
     const isInch = packagingUnit === 'inch';
     const factor = isInch ? 1 / 25.4 : 1;
@@ -3021,7 +3026,6 @@ export default function ImpositionSection({
                       handleBoxGutterYChange(nestY);
                       handleBoxGutterXChange(isInch ? 0.118 : 3.0);
                       setInterlockMode('INTERLOCKING');
-                      setTrimHeader(true);
                     }}
                     className={`px-2.5 py-1 rounded-lg font-mono text-[10px] border transition-all cursor-pointer shadow-sm flex items-center gap-1 ${
                       boxGutterY < 0 && Math.abs(parseFloat(boxGutterX) - (packagingUnit === 'inch' ? 0.118 : 3.0)) < 0.01
@@ -3227,7 +3231,6 @@ export default function ImpositionSection({
                           handleBoxGutterYChange(rounded);
                           handleBoxGutterXChange(isInch ? 0.118 : 3.0);
                           setInterlockMode('INTERLOCKING');
-                          setTrimHeader(true);
                         }}
                         className={`text-[9px] font-mono px-1.5 py-0.5 rounded border transition-all cursor-pointer ${
                           boxGutterY < 0 ? 'bg-indigo-600 text-white font-bold border-indigo-400' : 'bg-[#10141D] border-[#1E293B] text-slate-400 hover:text-white'
@@ -3247,7 +3250,6 @@ export default function ImpositionSection({
                           handleBoxGutterYChange(rounded);
                           handleBoxGutterXChange(isInch ? 0.197 : 5.0);
                           setInterlockMode('INTERLOCKING');
-                          setTrimHeader(true);
                         }}
                         className={`text-[9px] font-mono px-1.5 py-0.5 rounded border transition-all cursor-pointer ${
                           boxGutterY < 0 ? 'bg-indigo-950 border-indigo-600 text-indigo-300' : 'bg-[#10141D] border-[#1E293B] text-slate-400 hover:text-white'
@@ -3602,28 +3604,28 @@ export default function ImpositionSection({
                   Trim all white spaces except the content (e.g. in a 20×30 sheet, extract only the single 9×11 object and trim the rest), set zero box gap, and apply 0.25" sheet margins all around.
                 </p>
 
-                {/* Quick Presets Bar */}
+                {/* Quick 1-Click Presets Bar */}
                 <div className="flex items-center gap-1.5 flex-wrap">
-                  <button
-                    type="button"
-                    onClick={handleTightFit3mm}
-                    disabled={detectingMargins}
-                    className="px-3 py-1.5 rounded-lg bg-gradient-to-r from-blue-600 via-indigo-600 to-cyan-600 hover:from-blue-500 hover:to-cyan-500 text-white font-mono text-[11px] font-bold flex items-center gap-1.5 shadow-md shadow-blue-950/50 transition-all cursor-pointer disabled:opacity-50"
-                    title="Tight fit content, set 3.0 mm (0.118 in) in-between gap, 180° interlocking alternating rows, and 0.25 in sheet margins"
-                  >
-                    <Sparkles className="w-3.5 h-3.5 text-cyan-200" />
-                    <span>{detectingMargins ? 'Fitting...' : '✨ Tight Fit (3mm Interlock)'}</span>
-                  </button>
-
                   <button
                     type="button"
                     onClick={handleTightenCadPack}
                     disabled={detectingMargins}
-                    className="px-3 py-1.5 rounded-lg bg-gradient-to-r from-emerald-600 via-teal-600 to-cyan-600 hover:from-emerald-500 hover:to-cyan-500 text-white font-mono text-[11px] font-bold flex items-center gap-1.5 shadow-md shadow-emerald-950/50 transition-all cursor-pointer disabled:opacity-50"
-                    title="Automatically removes all blank margins, takes single 1-up object content, applies 0.25 inch sheet margin, and sets zero gap"
+                    className="px-3.5 py-1.5 rounded-xl bg-gradient-to-r from-emerald-500 via-teal-500 to-cyan-500 hover:from-emerald-400 hover:to-cyan-400 text-slate-950 font-mono text-xs font-extrabold flex items-center gap-1.5 shadow-md shadow-emerald-500/20 transition-all cursor-pointer disabled:opacity-50 hover:scale-[1.02] active:scale-[0.98]"
+                    title="1-Click Best Result: automatically removes all blank margins, takes 1-up artwork content, applies 0.25 inch sheet margins, and sets zero gap"
                   >
-                    <Sparkles className="w-3.5 h-3.5 text-emerald-200" />
-                    <span>{detectingMargins ? 'Tightening...' : '✨ Zero Gaps & Tight CAD Pack'}</span>
+                    <Sparkles className="w-3.5 h-3.5 fill-slate-950 text-slate-950" />
+                    <span>{detectingMargins ? 'Optimizing...' : '⚡ 1-Click Best Result (Zero Gaps)'}</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={handleTightFit3mm}
+                    disabled={detectingMargins}
+                    className="px-2.5 py-1.5 rounded-lg bg-gradient-to-r from-blue-600 via-indigo-600 to-cyan-600 hover:from-blue-500 hover:to-cyan-500 text-white font-mono text-[10px] font-bold flex items-center gap-1 shadow-sm transition-all cursor-pointer disabled:opacity-50"
+                    title="Tight fit content with 3.0 mm (0.118 in) in-between gap, 180° interlocking alternating rows, and 0.25 in sheet margins"
+                  >
+                    <Sparkles className="w-3 h-3 text-cyan-200" />
+                    <span>{detectingMargins ? 'Fitting...' : 'Tight Fit (3mm Interlock)'}</span>
                   </button>
 
                   <button
@@ -3632,22 +3634,27 @@ export default function ImpositionSection({
                     className="px-2.5 py-1.5 rounded-lg bg-emerald-950/80 hover:bg-emerald-900 border border-emerald-500/60 text-emerald-300 font-mono text-[10px] font-bold flex items-center gap-1 transition-all cursor-pointer shadow-sm"
                     title="Apply 0.25 inch (6.35 mm) margin to all 4 sides of the press sheet"
                   >
-                    <span>📐 0.25" Sheet Margin All</span>
+                    <span>📐 0.25" Margins All</span>
                   </button>
 
-                  <button
-                    type="button"
-                    onClick={handleToggleTrimHeader}
-                    className={`px-2.5 py-1.5 rounded-lg font-mono text-[10px] font-bold flex items-center gap-1 border transition-all cursor-pointer ${
+                  {/* Explicit Trim Title Header Checkbox: ONLY checked when user ticks it */}
+                  <label
+                    className={`px-2.5 py-1.5 rounded-lg font-mono text-[10px] flex items-center gap-1.5 border transition-all cursor-pointer select-none ${
                       trimHeader
-                        ? 'bg-amber-500 text-slate-950 border-amber-400 shadow-md shadow-amber-500/20'
-                        : 'bg-[#141C2A] text-amber-300 border-amber-500/50 hover:bg-amber-950/40'
+                        ? 'bg-amber-500 text-slate-950 border-amber-400 font-bold shadow-md shadow-amber-500/20'
+                        : 'bg-[#10141D] text-slate-400 border-[#233045] hover:border-slate-600 hover:text-slate-200 font-medium'
                     }`}
-                    title="Trim off top title block, KLD text, or slug line (works for both vector key lines and image artwork)"
+                    title="Trim off top title block, KLD text, or slug line (only enabled when you check this)"
                   >
-                    <FileText className="w-3 h-3" />
-                    <span>{trimHeader ? '✓ Title Header Trimmed' : 'Trim Title Header (Keylines & Images)'}</span>
-                  </button>
+                    <input
+                      type="checkbox"
+                      checked={trimHeader}
+                      onChange={(e) => handleToggleTrimHeader(e.target.checked)}
+                      className="w-3.5 h-3.5 rounded accent-amber-500 cursor-pointer"
+                    />
+                    <FileText className={`w-3 h-3 ${trimHeader ? 'text-slate-950' : 'text-slate-500'}`} />
+                    <span>Trim Title Header (Keylines & Images)</span>
+                  </label>
 
                   {trimHeader && (
                     <div className="flex items-center gap-1 bg-[#141C2A] border border-amber-500/40 rounded-lg px-2 py-1 text-[10px] font-mono text-amber-300 shadow-sm">
@@ -3666,12 +3673,12 @@ export default function ImpositionSection({
 
                   <button
                     type="button"
-                    onClick={() => handleAutoDetectMargins(false)}
-                    disabled={detectingMargins}
-                    className="px-2.5 py-1 rounded-lg bg-[#141C2A] hover:bg-[#1E293B] text-cyan-300 font-mono text-[10px] font-semibold border border-cyan-800/60 transition-all cursor-pointer disabled:opacity-50 flex items-center gap-1"
+                    onClick={() => setShowManualMargins(prev => !prev)}
+                    className="px-2.5 py-1.5 rounded-lg bg-[#141C2A] hover:bg-[#1E293B] text-slate-300 hover:text-white font-mono text-[10px] border border-[#233045] transition-all cursor-pointer flex items-center gap-1"
+                    title="Toggle manual margin sliders"
                   >
-                    <Scissors className="w-3 h-3 text-cyan-400" />
-                    <span>{detectingMargins ? 'Detecting...' : 'Fit Content Only'}</span>
+                    <Sliders className="w-3 h-3 text-cyan-400" />
+                    <span>{showManualMargins ? 'Hide Sliders' : 'Fine-Tune Sliders'}</span>
                   </button>
 
                   <button
@@ -3681,10 +3688,12 @@ export default function ImpositionSection({
                       setTrimBottom(0);
                       setTrimLeft(0);
                       setTrimRight(0);
+                      setTrimHeader(false);
                     }}
-                    className="px-2 py-1 rounded-lg bg-[#141C2A] hover:bg-rose-950/50 text-rose-300 font-mono text-[10px] border border-rose-900/50 transition-all cursor-pointer"
+                    className="px-2 py-1.5 rounded-lg bg-[#141C2A] hover:bg-rose-950/50 text-rose-300 font-mono text-[10px] border border-rose-900/50 transition-all cursor-pointer"
+                    title="Reset all margins to zero"
                   >
-                    Reset Margins
+                    Reset
                   </button>
                 </div>
 
@@ -3694,8 +3703,9 @@ export default function ImpositionSection({
                   </div>
                 )}
 
-                {/* 4-Sided Artwork Trim Inputs */}
-                <div className="grid grid-cols-2 gap-2">
+                {/* 4-Sided Artwork Trim Inputs (Collapsible for Clean, Simple UI) */}
+                {showManualMargins && (
+                <div className="grid grid-cols-2 gap-2 pt-2 border-t border-[#1C2637]">
                   {/* Top Margin Trim */}
                   <div className="p-2 rounded-lg bg-[#141C2A] border border-[#233045] space-y-1">
                     <div className="flex items-center justify-between text-[10px] font-mono">
@@ -3820,6 +3830,7 @@ export default function ImpositionSection({
                     />
                   </div>
                 </div>
+                )}
 
                 {/* Real-time Dimensions & Space Recovered Badge */}
                 <div className="p-2.5 rounded-lg bg-[#141C2A] border border-[#1E293B] space-y-1.5">
@@ -3938,8 +3949,8 @@ export default function ImpositionSection({
             <div>
               <div className="flex items-center justify-between mb-1">
                 <label className="text-[11px] font-mono text-slate-400">Sheet Stock Preset</label>
-                <span className="text-[10px] font-mono text-slate-500">
-                  {sheetWidth} × {sheetHeight} mm
+                <span className="text-[10px] font-mono text-slate-400">
+                  {sheetWidth} × {sheetHeight} mm ({Number(sheetWidth / 25.4).toFixed(2)}" × {Number(sheetHeight / 25.4).toFixed(2)}")
                 </span>
               </div>
               <select
@@ -4163,7 +4174,7 @@ export default function ImpositionSection({
               <div className="flex items-center justify-between mb-1">
                 <label className="text-[11px] font-mono text-slate-400">Standard Book Trim Preset</label>
                 <span className="text-[10px] font-mono text-emerald-400 font-semibold">
-                  {bookWidth} × {bookHeight} mm
+                  {bookWidth} × {bookHeight} mm ({Number(bookWidth / 25.4).toFixed(2)}" × {Number(bookHeight / 25.4).toFixed(2)}")
                 </span>
               </div>
               <select
@@ -4211,10 +4222,10 @@ export default function ImpositionSection({
                     step="0.5"
                     value={bookWidth}
                     onChange={(e) => handleBookWidthChange(e.target.value)}
-                    className="w-full bg-[#141C2A] border border-[#233045] focus:border-emerald-500 rounded-lg pl-7 pr-7 py-1.5 text-xs font-mono text-white"
+                    className="w-full bg-[#141C2A] border border-[#233045] focus:border-emerald-500 rounded-lg pl-7 pr-16 py-1.5 text-xs font-mono text-white"
                     placeholder="Width mm"
                   />
-                  <span className="absolute right-2 top-2 text-[9px] font-mono text-slate-500">mm</span>
+                  <span className="absolute right-2 top-2 text-[9px] font-mono text-slate-400">mm ({Number(bookWidth / 25.4).toFixed(2)}")</span>
                 </div>
                 <div className="relative">
                   <span className="absolute left-2.5 top-2 text-[10px] font-mono text-slate-500">H:</span>
@@ -4223,10 +4234,10 @@ export default function ImpositionSection({
                     step="0.5"
                     value={bookHeight}
                     onChange={(e) => handleBookHeightChange(e.target.value)}
-                    className="w-full bg-[#141C2A] border border-[#233045] focus:border-emerald-500 rounded-lg pl-7 pr-7 py-1.5 text-xs font-mono text-white"
+                    className="w-full bg-[#141C2A] border border-[#233045] focus:border-emerald-500 rounded-lg pl-7 pr-16 py-1.5 text-xs font-mono text-white"
                     placeholder="Height mm"
                   />
-                  <span className="absolute right-2 top-2 text-[9px] font-mono text-slate-500">mm</span>
+                  <span className="absolute right-2 top-2 text-[9px] font-mono text-slate-400">mm ({Number(bookHeight / 25.4).toFixed(2)}")</span>
                 </div>
               </div>
               {bookPreset === 'CUSTOM' && (
@@ -4338,11 +4349,15 @@ export default function ImpositionSection({
             <div className="p-3 rounded-xl bg-[#0D121B] border border-[#1E293B] space-y-1.5">
               <div className="flex items-center justify-between text-[11px] font-mono">
                 <span className="text-slate-400">Grid Slot Capacity ({columns}×{rows}):</span>
-                <span className="text-cyan-300 font-bold">{fitMetrics.slotW} × {fitMetrics.slotH} mm</span>
+                <span className="text-cyan-300 font-bold">
+                  {fitMetrics.slotW} × {fitMetrics.slotH} mm ({Number(fitMetrics.slotW / 25.4).toFixed(2)}" × {Number(fitMetrics.slotH / 25.4).toFixed(2)}")
+                </span>
               </div>
               <div className="flex items-center justify-between text-[11px] font-mono">
                 <span className="text-slate-400">Target Book Trim:</span>
-                <span className="text-emerald-300 font-bold">{bookWidth} × {bookHeight} mm</span>
+                <span className="text-emerald-300 font-bold">
+                  {bookWidth} × {bookHeight} mm ({Number(bookWidth / 25.4).toFixed(2)}" × {Number(bookHeight / 25.4).toFixed(2)}")
+                </span>
               </div>
               <div className={`pt-1 text-[10px] font-mono border-t border-[#1E293B] ${fitMetrics.fitsCleanly ? 'text-emerald-400' : 'text-amber-400'
                 }`}>
@@ -4965,34 +4980,15 @@ export default function ImpositionSection({
               )}
             </div>
 
-            {/* ─── Digital Press Setup Intelligence Card ─── */}
+            {/* ─── Digital Press Setup Profile Badge ─── */}
             {printTechnology === 'DIGITAL' && (
-              <div className="mt-2.5 p-2.5 rounded-xl bg-slate-900/70 border border-emerald-900/50 space-y-2">
-                <div className="flex items-center justify-between">
-                  <span className="text-[10px] font-mono font-bold text-emerald-400 uppercase flex items-center gap-1">
-                    <Printer className="w-3 h-3 text-emerald-400" />
-                    Digital Press Calibration Guard
-                  </span>
-                  <span className="text-[9px] font-mono px-1.5 py-0.2 rounded bg-emerald-950 text-emerald-300 border border-emerald-800">
-                    SRA3 / Cut-Sheet
-                  </span>
-                </div>
-                <div className="text-[9px] font-mono space-y-1 text-slate-300">
-                  <div className="flex items-center justify-between">
-                    <span className="text-slate-400">Lead Gripper Margin (≥4.5mm):</span>
-                    <span className={`font-bold ${parseFloat(marginTop) >= 4.5 ? 'text-emerald-400' : 'text-amber-400'}`}>
-                      {marginTop}mm {parseFloat(marginTop) >= 4.5 ? '✓ Safe' : '⚠️ Risk'}
-                    </span>
-                  </div>
-                  <div className="flex items-center justify-between">
-                    <span className="text-slate-400">Automated Cutter Protocol:</span>
-                    <span className="text-cyan-300 font-bold">Duplo / Horizon / Zünd</span>
-                  </div>
-                  <div className="flex items-center justify-between">
-                    <span className="text-slate-400">Press Profile:</span>
-                    <span className="text-slate-200">Closed-Loop Toner (Zero Plate Wear)</span>
-                  </div>
-                </div>
+              <div className="mt-2 p-2 rounded-xl bg-slate-900/70 border border-emerald-900/50 flex items-center justify-between text-[10px] font-mono">
+                <span className="text-emerald-400 font-bold flex items-center gap-1">
+                  <Printer className="w-3 h-3" /> Digital Cut-Sheet Profile
+                </span>
+                <span className={parseFloat(marginTop) >= 4.5 ? 'text-emerald-300' : 'text-amber-300'}>
+                  Gripper: {marginTop}mm {parseFloat(marginTop) >= 4.5 ? '✓ Safe' : '⚠️'}
+                </span>
               </div>
             )}
 
@@ -5091,12 +5087,16 @@ export default function ImpositionSection({
           <div className="glass-card rounded-2xl p-3 border border-white/10 space-y-1.5 text-xs font-mono">
             <div className="flex items-center justify-between text-slate-400">
               <span>Sheet Stock:</span>
-              <strong className="text-white">{sheetWidth} × {sheetHeight} mm</strong>
+              <strong className="text-white">
+                {sheetWidth} × {sheetHeight} mm ({Number(sheetWidth / 25.4).toFixed(2)}" × {Number(sheetHeight / 25.4).toFixed(2)}")
+              </strong>
             </div>
             <div className="flex items-center justify-between text-slate-400">
               <span>{partMode === 'BOX' ? 'Flat Box Dieline:' : 'Book Trim:'}</span>
               <strong className={partMode === 'BOX' ? 'text-emerald-300' : 'text-cyan-300'}>
-                {partMode === 'BOX' ? `${boxFlatDimensions.flatW} × ${boxFlatDimensions.flatH} mm` : `${bookWidth} × ${bookHeight} mm`}
+                {partMode === 'BOX'
+                  ? `${boxFlatDimensions.flatW} × ${boxFlatDimensions.flatH} mm (${Number((boxFlatDimensions.flatW * (packagingUnit === 'inch' ? 25.4 : 1)) / 25.4).toFixed(2)}" × ${Number((boxFlatDimensions.flatH * (packagingUnit === 'inch' ? 25.4 : 1)) / 25.4).toFixed(2)}")`
+                  : `${bookWidth} × ${bookHeight} mm (${Number(bookWidth / 25.4).toFixed(2)}" × ${Number(bookHeight / 25.4).toFixed(2)}")`}
               </strong>
             </div>
             <div className="flex items-center justify-between text-slate-400">
@@ -5158,23 +5158,6 @@ export default function ImpositionSection({
                 <strong>Imposition Error:</strong>
                 <p className="mt-0.5 m-0 text-red-200">{error}</p>
               </div>
-            </div>
-          )}
-
-          {/* Out of size auto-fit indicator */}
-          {!minSheetNeeded.fitsCurrent && (
-            <div className="p-2.5 rounded-xl bg-amber-950/40 border border-amber-500/50 text-[10px] font-mono text-amber-300 flex items-center justify-between gap-2">
-              <span className="flex items-center gap-1.5">
-                <AlertCircle className="w-3.5 h-3.5 text-amber-400 shrink-0" />
-                <span>Current sheet is too small. Will auto-apply minimum sheet ({minSheetNeeded.bestSheet.name} {minSheetNeeded.bestSheet.width}×{minSheetNeeded.bestSheet.height} mm) on impose.</span>
-              </span>
-              <button
-                type="button"
-                onClick={() => applyMinimumSheetSize()}
-                className="px-2 py-0.5 rounded bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold shrink-0 cursor-pointer transition-all"
-              >
-                Apply Now
-              </button>
             </div>
           )}
 
